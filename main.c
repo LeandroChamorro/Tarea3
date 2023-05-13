@@ -31,6 +31,17 @@ void solicitarString(char *cadena, const char *mensaje){
   getchar();
 }
 
+tipoTarea* buscarTarea(List *lista, char *nombre){
+  for (tipoTarea* p = firstList(lista) ; p != NULL ; p = nextList(lista)){
+      //Se busca si el nombre coincide
+      if (strcmp(p->nombre, nombre) == 0){
+        return p;
+      }
+    }
+  return NULL;
+}
+
+
 void agregarTarea(List* tareas,Map *mapaTarea, Stack * acciones){
   tipoTarea *tarea;
   tarea = malloc(sizeof(tipoTarea));
@@ -52,6 +63,30 @@ void agregarTarea(List* tareas,Map *mapaTarea, Stack * acciones){
   pushBack(tareas,tarea);
 }
 
+void establecerPrecedencia(List *tareas, Stack *acciones){
+  char tarea1[30],tarea2[30];
+  solicitarString(tarea1,"Ingrese nombre de la tarea 1\n");
+  solicitarString(tarea2, "Ingrese nombre de la tarea 2\n");
+  
+  tipoTarea *tareaPre1 = buscarTarea(tareas, tarea2);
+  tipoTarea *tareaPre2 = buscarTarea(tareas, tarea2);
+
+  if(tareaPre1==NULL){
+    printf("La tarea 1 no existe\n");
+    return;
+  }
+  if(tareaPre2==NULL){
+    printf("La tarea 2 no existe\n");
+    return;
+  }
+
+  tipoAccion *accion=malloc(sizeof(tipoAccion));
+  accion->accion=2;
+  strcpy(accion->presedencia, tarea1);
+  stack_push(acciones, accion);
+  
+  pushBack(tareaPre2->precedentes,tarea1);
+}
 
 void menu(List *tareas, Map *mapaTarea, Stack *acciones){
   //Se crea una variable "opcion" la cual será una condicionante para el ciclo "while" base de nuestro programa
@@ -75,7 +110,7 @@ void menu(List *tareas, Map *mapaTarea, Stack *acciones){
       case 1: agregarTarea(tareas,mapaTarea, acciones);
       break; 
             
-      //case 2: establecerPrecedencia(tareas,acciones);
+      case 2: establecerPrecedencia(tareas,acciones);
       break;
           
       //case 3: mostrarTareas(tareas);

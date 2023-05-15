@@ -5,11 +5,14 @@
 #include "list.h"
 #include "Map.h"
 #include "Stack.h"
+#include "heap.h"
 
+//ESTRUCTURAS
 typedef struct{
   char nombre[30];
   int prioridad;
   int contPre;
+  bool completada;
   List *precedentes;
 }tipoTarea;
 
@@ -19,8 +22,10 @@ typedef struct{
   tipoTarea tareaCom;
 }tipoAccion;
 
-int is_equal_int(void * key1, void * key2) {
-    if(*(int*)key1 == *(int*)key2) return 1;
+
+//FUNCIONES SECUNDARIAS
+int is_equal_string(void * key1, void * key2) {
+    if(strcmp((char*)key1, (char*)key2)==0) return 1;
     return 0;
 }
 
@@ -42,7 +47,10 @@ tipoTarea* buscarTarea(List *lista, char *nombre){
 }
 
 
-void agregarTarea(List* tareas,Map *mapaTarea, Stack * acciones){
+//FUNCIONES PRIMARIAS
+
+//OPCIÒN 1
+void agregarTarea(Map *mapaTarea, Stack * acciones){
   tipoTarea *tarea;
   tarea = malloc(sizeof(tipoTarea));
   
@@ -54,23 +62,27 @@ void agregarTarea(List* tareas,Map *mapaTarea, Stack * acciones){
   
   tarea->precedentes = createList();
   tarea->contPre = 0;
-
+  tarea->completada = false;
+  
   tipoAccion *accion = malloc(sizeof(tipoAccion));
   accion->accion = 1;
   stack_push(acciones, accion);
   
-  insertMap(mapaTarea , &tarea->prioridad , tarea);
-  pushBack(tareas,tarea);
+  char *nombreTarea=malloc(100*sizeof(char));
+  strcpy(nombreTarea, tarea->nombre);
+  insertMap(mapaTarea, nombreTarea, tarea);
 }
 
-void establecerPrecedencia(List *tareas, Stack *acciones){
+//OPCION 2
+void establecerPrecedencia(Map *mapaTarea, Stack *acciones){
   char tarea1[30],tarea2[30];
+  
   solicitarString(tarea1,"Ingrese nombre de la tarea 1\n");
   solicitarString(tarea2, "Ingrese nombre de la tarea 2\n");
   
-  tipoTarea *tareaPre1 = buscarTarea(tareas, tarea2);
-  tipoTarea *tareaPre2 = buscarTarea(tareas, tarea2);
-
+  tipoTarea *tareaPre1 = searchMap(mapaTarea, tarea1);
+  tipoTarea *tareaPre2 = searchMap(mapaTarea, tarea2);
+  
   if(tareaPre1==NULL){
     printf("La tarea 1 no existe\n");
     return;
@@ -85,10 +97,14 @@ void establecerPrecedencia(List *tareas, Stack *acciones){
   strcpy(accion->presedencia, tarea1);
   stack_push(acciones, accion);
   
-  pushBack(tareaPre2->precedentes,tarea1);
+  pushBack(tareaPre2->precedentes,tareaPre1);
+  tareaPre2->contPre++;
 }
 
-void menu(List *tareas, Map *mapaTarea, Stack *acciones){
+
+
+
+void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
   //Se crea una variable "opcion" la cual será una condicionante para el ciclo "while" base de nuestro programa
   int opcion = 1;
   while(opcion != 0){
@@ -107,13 +123,13 @@ void menu(List *tareas, Map *mapaTarea, Stack *acciones){
     getchar();
     //Se utiliza un switch para acceder a las opciones de cada función
     switch(opcion){
-      case 1: agregarTarea(tareas,mapaTarea, acciones);
+      case 1: agregarTarea(mapaTarea, acciones);
       break; 
             
-      case 2: establecerPrecedencia(tareas,acciones);
+      case 2: establecerPrecedencia(mapaTarea, acciones);
       break;
           
-      //case 3: mostrarTareas(tareas);
+      case 3: mostrarTareas(mapaTarea, montarea);
       break;
 
       //case 4: marcarCompletada(tareas);
@@ -157,9 +173,10 @@ void menu(List *tareas, Map *mapaTarea, Stack *acciones){
 
 int main(void) {
   Stack *acciones = stack_create();
-  List *tareas = createList();
-  Map * mapaTarea = createMap(is_equal_int);
-  menu(tareas, mapaTarea, acciones);
+  Map * mapaTarea = createMap(is_equal_string);
+  Heap *montarea = createHeap();
+  menu(mapaTarea, acciones, montarea);
   
   return 0;
 }
+

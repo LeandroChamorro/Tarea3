@@ -9,17 +9,17 @@
 
 //ESTRUCTURAS
 typedef struct{
-  char nombre[30];
-  int prioridad;
-  int contPre;
-  bool completada;
-  List *precedentes;
+  char nombre[30]; //Nombre de la tarea
+  int prioridad; //Prioridad de la tarea
+  int contPre; //Contador de tareas precedentes a esta tarea
+  bool completada; //Booliano que sirve para la tercera función
+  List *precedentes; // Lista de tareas precedentes a esta tarea
 }tipoTarea;
 
 typedef struct{
-  int accion; //si agregó, 1, si añadiò precedencia, 2 y si completó la tarea 3.  
-  char presedencia[30];
-  tipoTarea *tareaCom;
+  int accion; //si agregó, 1, si añadió precedencia, 2 y si completó la tarea, 3.  
+  //char presedencia[30];
+  tipoTarea *tareaCom; //Se guarda la tarea con la que hay que hacer la acción
 }tipoAccion;
 
 
@@ -29,6 +29,7 @@ int is_equal_string(void * key1, void * key2) {
     return 0;
 }
 
+//Función para solicitar una cadena de caracteres.
 void solicitarString(char *cadena, const char *mensaje){
   printf("%s\n", mensaje);
   fflush(stdin);
@@ -36,6 +37,7 @@ void solicitarString(char *cadena, const char *mensaje){
   getchar();
 }
 
+//Función para buscar una tarea en una lista
 tipoTarea* buscarTarea(List *lista, char *nombre){
   for (tipoTarea* p = firstList(lista) ; p != NULL ; p = nextList(lista)){
       //Se busca si el nombre coincide
@@ -46,29 +48,32 @@ tipoTarea* buscarTarea(List *lista, char *nombre){
   return NULL;
 }
 
-
 //FUNCIONES PRIMARIAS
 
 //OPCIÒN 1
 void agregarTarea(Map *mapaTarea, Stack * acciones){
-  tipoTarea *tarea;
+  tipoTarea *tarea; //Se crea la tarea.
   tarea = malloc(sizeof(tipoTarea));
   
-  solicitarString(tarea->nombre,"ingrese nombre\n");
+  solicitarString(tarea->nombre,"Ingrese nombre de la tarea: \n");
   printf("Ingrese prioridad de la tarea: \n");
   fflush(stdin);
   scanf("%d", &tarea->prioridad);
   getchar();
-  
+
+  //Se completan todos los parámetros de la variable tipoTarea
   tarea->precedentes = createList();
   tarea->contPre = 0;
   tarea->completada = false;
-  
+
+  //Se crea la variable acción y se le asigna 1, correspondiente a que se agregó a una tarea
+  //Luego se va hacia la pila de acciones
   tipoAccion *accion = malloc(sizeof(tipoAccion));
   accion->accion = 1;
   accion->tareaCom=tarea;
   stack_push(acciones, accion);
-  
+
+  //La tarea se inserta en el mapa de tareas
   char *nombreTarea=malloc(100*sizeof(char));
   strcpy(nombreTarea, tarea->nombre);
   insertMap(mapaTarea, nombreTarea, tarea);
@@ -80,7 +85,8 @@ void establecerPrecedencia(Map *mapaTarea, Stack *acciones){
   
   solicitarString(tarea1,"Ingrese nombre de la tarea 1\n");
   solicitarString(tarea2, "Ingrese nombre de la tarea 2\n");
-  
+
+  //Se buscan ambas tareas en el mapa
   tipoTarea *tareaPre1 = searchMap(mapaTarea, tarea1);
   tipoTarea *tareaPre2 = searchMap(mapaTarea, tarea2);
   
@@ -92,23 +98,28 @@ void establecerPrecedencia(Map *mapaTarea, Stack *acciones){
     printf("La tarea 2 no existe\n");
     return;
   }
-
+  
+  //La tarea 1 se agrega a la lista de precedentes de la tarea 2
+  pushBack(tareaPre2->precedentes,tareaPre1);
+  tareaPre2->contPre++;
+  
+  //Se crea la variable acción y se le asigna 2, correspondiente a que 
+  //se establece precedencia entre dos tareas.
+  //Luego se va hacia la pila de acciones
   tipoAccion *accion=malloc(sizeof(tipoAccion));
   accion->accion = 2;
   accion->tareaCom=tareaPre2;
-  strcpy(accion->presedencia, tarea1);
+  //strcpy(accion->presedencia, tarea1);
   stack_push(acciones, accion);
-  
-  pushBack(tareaPre2->precedentes,tareaPre1);
-  tareaPre2->contPre++;
 }
 
 //OPCION 3
 void mostrarTareas(Map* mapaTarea, Heap* montarea){ 
-  List* listaMostrar = createList();//Lista de tareas
+  List* listaMostrar = createList();//Lista de tareas que se mostrarán
   List* precedentesGeneral = createList();//Lista de tareas con precedentes
 
-  //Obtenemos las tareas sin precedentes
+  //Obtenemos las tareas sin precedentes y se mandan al montículo
+  //Las tareas con precedentes se van a la lista de las tareas con precedentes
   for(tipoTarea *tareaAct = (tipoTarea*)firstMap(mapaTarea) ; tareaAct != NULL ; tareaAct = nextMap(mapaTarea)){
     if(tareaAct->contPre == 0){
       heap_push(montarea, tareaAct , tareaAct->prioridad);
@@ -118,7 +129,13 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
     }
   }
 
-  //Agregamos las demas tareas al monticulo
+  //Agregamos las demas tareas que tienen precedentes al montículo,
+  //revisando tarea por tarea si la raiz del montículo es
+  //precedente de alguna de las tareas con precedentes, si es asi se 
+  //marca y se revisa si la tarea con precedentes ya no tenga precedentes,
+  //en ese caso se agregará al montículo.
+  //Además, cuando se saca la raiz del montículo, se inserta en una lista,
+  //de esta forma quedando ordenada de la manera que se requiere.
   while(firstList(precedentesGeneral)!=NULL){
     tipoTarea *root = heap_top(montarea);
     heap_pop(montarea);
@@ -156,12 +173,16 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
 //OPCION 4
 void marcarCompletada(Map *mapaTarea, Stack* acciones){
   char tarea[30];
-  solicitarString(tarea,"Ingrese nombre de la tarea a eliminar\n");
+  solicitarString(tarea,"Ingrese nombre de la tarea a completar\n");
 
   tipoTarea *tareaElim = searchMap(mapaTarea, tarea);
-  //Ya tengo la tarea
+  //Se busca la tarea y se verifica que exista
+  if(tareaElim==NULL){
+    printf("La tarea que quiere marcar como completada no existe o ya fue completada\n");
+    return;
+  }
   
-  //Reviso si tiene precedentes
+  //Se revisa si la tarea tiene precedentes, si tiene se advierte, sino solo se completa
   for(tipoTarea *tareaAct = (tipoTarea*)firstMap(mapaTarea) ; tareaAct != NULL ; tareaAct = nextMap(mapaTarea)){      
     for(tipoTarea * preActual = firstList(tareaAct->precedentes) ; preActual != NULL ; preActual = nextList(tareaAct->precedentes)){
       if(strcmp(preActual->nombre,tareaElim->nombre)){
@@ -193,49 +214,57 @@ void marcarCompletada(Map *mapaTarea, Stack* acciones){
     }
   }
   printf("La tarea se marcó como completada con éxito\n");
+
+  //Se crea la variable acción y se le asigna 3, correspondiente a que 
+  //se completó una tarea.
+  //Luego se va hacia la pila de acciones
   tipoAccion *accion=malloc(sizeof(tipoAccion));
   accion->accion=3;
   accion->tareaCom = tareaElim;
   stack_push(acciones, accion);
     
-  eraseMap(mapaTarea, tarea);
+  //eraseMap(mapaTarea, tarea);
 }
 
 //OPCION 5
 void deshacerAccion(Map *mapaTarea, Stack* acciones){
-  
-  printf("hola1");
+    
   tipoAccion *accionn=malloc(sizeof(tipoAccion));
+  //Se busca la última accion.
   accionn=stack_top(acciones);
 
-  printf("hola");
+  //Si la acción es nula significa que no quedan acciones que deshacer
   if(accionn==NULL){
     printf("No hay acciones que deshacer\n");
     return;
   }
 
+  //Si la última acción fue agregar una tarea, 
+  //entonces se borra del mapa de tareas
   if(accionn->accion == 1){
-    printf("añadir entro");
     tipoTarea *basura=malloc(sizeof(tipoTarea));
     basura=eraseMap(mapaTarea, accionn->tareaCom->nombre);
   }
 
+  //Si la última acción fue agregar precedencia entre
+  //2 tareas, entonces se elimina la tarea de la 
+  //lista de precedentes de la tarea correspondiente
   if(accionn->accion==2){
-    printf("precedencia entro");
     tipoTarea *tarea=searchMap(mapaTarea, accionn->tareaCom->nombre);
     popBack(tarea->precedentes);
     tarea->contPre--;
   }
-  
+
+  //Si la última acción fue completar una tarea,
+  //entonces esta se vuelve a insertar en el mapa.
   if(accionn->accion==3){
-    printf("eliminar entro");
     char *aux=malloc(100*sizeof(char));
     strcpy(aux, accionn->tareaCom->nombre);
     insertMap(mapaTarea, aux, accionn->tareaCom);
   }
-  
+
+  //Se elimina la acción con la que se estaba trabajando
   popFront(acciones);
-  
 }
 
 
@@ -273,7 +302,6 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
       break;
       
       case 5: 
-        printf("holi");
         deshacerAccion(mapaTarea, acciones);
       break;
         

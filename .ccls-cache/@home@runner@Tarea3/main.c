@@ -17,9 +17,9 @@ typedef struct{
 }tipoTarea;
 
 typedef struct{
-  int accion; //si agregó, 1, si completó la tarea, 2 y si añadió precedencia 3.  
+  int accion; //si agregó, 1, si añadiò precedencia, 2 y si completó la tarea 3.  
   char presedencia[30];
-  tipoTarea tareaCom;
+  tipoTarea *tareaCom;
 }tipoAccion;
 
 
@@ -66,6 +66,7 @@ void agregarTarea(Map *mapaTarea, Stack * acciones){
   
   tipoAccion *accion = malloc(sizeof(tipoAccion));
   accion->accion = 1;
+  accion->tareaCom=tarea;
   stack_push(acciones, accion);
   
   char *nombreTarea=malloc(100*sizeof(char));
@@ -93,7 +94,8 @@ void establecerPrecedencia(Map *mapaTarea, Stack *acciones){
   }
 
   tipoAccion *accion=malloc(sizeof(tipoAccion));
-  accion->accion=2;
+  accion->accion = 2;
+  accion->tareaCom=tareaPre2;
   strcpy(accion->presedencia, tarea1);
   stack_push(acciones, accion);
   
@@ -146,9 +148,61 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
   }
 
   for(tipoTarea *tareaAct = (tipoTarea*)firstList(listaMostrar) ; tareaAct != NULL ; tareaAct = nextList(listaMostrar)){
-      printf("%s , %i \n",tareaAct->nombre, tareaAct->prioridad);
+    tareaAct->completada = false;
+    printf("%s , %i \n",tareaAct->nombre, tareaAct->prioridad);
   }
 }
+
+//OPCION 4
+void marcarCompletada(Map *mapaTarea, Stack* acciones){
+  char tarea[30];
+  solicitarString(tarea,"Ingrese nombre de la tarea a eliminar\n");
+
+  tipoTarea *tareaElim = searchMap(mapaTarea, tarea);
+  //Ya tengo la tarea
+  
+  //Reviso si tiene precedentes
+  for(tipoTarea *tareaAct = (tipoTarea*)firstMap(mapaTarea) ; tareaAct != NULL ; tareaAct = nextMap(mapaTarea)){      
+    for(tipoTarea * preActual = firstList(tareaAct->precedentes) ; preActual != NULL ; preActual = nextList(tareaAct->precedentes)){
+      if(strcmp(preActual->nombre,tareaElim->nombre)){
+        printf("Esta tarea tiene precedentes, ¿Está seguro que quiere marcarla como completada? Presione 1 para completar, 2 para no completar\n");
+        int numero;
+        fflush(stdin);
+        scanf("%d", &numero);
+        getchar();
+        while(true){
+          if(numero!=1 && numero!=2){
+            printf("Ingrese una opción válida\n");
+            fflush(stdin);
+            scanf("%d", &numero);
+            getchar();
+          }else{
+            if(numero==1){
+              tipoAccion *accion=malloc(sizeof(tipoAccion));
+              accion->accion=2;
+              accion->tareaCom = tareaElim;
+              stack_push(acciones, accion);  
+              eraseMap(mapaTarea, tarea);
+              return;
+            }else{
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+  printf("La tarea se marcó como completada con éxito\n");
+  tipoAccion *accion=malloc(sizeof(tipoAccion));
+  accion->accion=3;
+  accion->tareaCom = tareaElim;
+  stack_push(acciones, accion);
+    
+  eraseMap(mapaTarea, tarea);
+}
+
+
+
 
 
 void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
@@ -166,6 +220,7 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
     printf("║ Si no desea hacer nada más presione 0                       ║\n");
     printf("╚════════════════════════════•°🜥°•════════════════════════════╝\n\n");
     //Se cambia el valor de la variable "opcion" con un valor que desee el usuario realizar
+    fflush(stdin);
     scanf("%d", &opcion);
     getchar();
     //Se utiliza un switch para acceder a las opciones de cada función
@@ -179,14 +234,16 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
       case 3: mostrarTareas(mapaTarea, montarea);
       break;
 
-      //case 4: marcarCompletada(tareas);
+      case 4: marcarCompletada(mapaTarea, acciones);
       break;
       
-      //case 5: deshacerAccion(tareas);
-      break;
+      //case 5: 
+        //printf("holi");
+        //deshacerAccion(mapaTarea, acciones);
+      //break;
         
       //case 6: cargarDatos(tareas);
-      break;
+      //break;
       //en caso de ser cero se imprime lo sgte. Para finalizar el programa
       case 0:
         printf("⠀⠀⠀⠀⠀⠀⠀⢀⣤⠖⠛⠉⠉⠛⠶⣄⡤⠞⠛⠛⠙⠳⢤⡀\n");

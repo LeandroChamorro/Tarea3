@@ -201,7 +201,42 @@ void marcarCompletada(Map *mapaTarea, Stack* acciones){
   eraseMap(mapaTarea, tarea);
 }
 
+//OPCION 5
+void deshacerAccion(Map *mapaTarea, Stack* acciones){
+  
+  printf("hola1");
+  tipoAccion *accionn=malloc(sizeof(tipoAccion));
+  accionn=stack_top(acciones);
 
+  printf("hola");
+  if(accionn==NULL){
+    printf("No hay acciones que deshacer\n");
+    return;
+  }
+
+  if(accionn->accion == 1){
+    printf("añadir entro");
+    tipoTarea *basura=malloc(sizeof(tipoTarea));
+    basura=eraseMap(mapaTarea, accionn->tareaCom->nombre);
+  }
+
+  if(accionn->accion==2){
+    printf("precedencia entro");
+    tipoTarea *tarea=searchMap(mapaTarea, accionn->tareaCom->nombre);
+    popBack(tarea->precedentes);
+    tarea->contPre--;
+  }
+  
+  if(accionn->accion==3){
+    printf("eliminar entro");
+    char *aux=malloc(100*sizeof(char));
+    strcpy(aux, accionn->tareaCom->nombre);
+    insertMap(mapaTarea, aux, accionn->tareaCom);
+  }
+  
+  popFront(acciones);
+  
+}
 
 
 
@@ -237,10 +272,10 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
       case 4: marcarCompletada(mapaTarea, acciones);
       break;
       
-      //case 5: 
-        //printf("holi");
-        //deshacerAccion(mapaTarea, acciones);
-      //break;
+      case 5: 
+        printf("holi");
+        deshacerAccion(mapaTarea, acciones);
+      break;
         
       //case 6: cargarDatos(tareas);
       //break;

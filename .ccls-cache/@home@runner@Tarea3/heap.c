@@ -40,7 +40,7 @@ void heap_push(Heap* pq, void* data, int priority){
   pq->size++;
   
   while(padre>=0){
-    if(pq->heapArray[posicion].priority > pq->heapArray[padre].priority){
+    if(pq->heapArray[posicion].priority < pq->heapArray[padre].priority){
       heapElem aux=pq->heapArray[posicion];
       pq->heapArray[posicion]=pq->heapArray[padre];
       pq->heapArray[padre]=aux;
@@ -68,13 +68,13 @@ void heap_pop(Heap* pq){
 
     if(hijo1>=pq->size || hijo2>=pq->size) return;
     
-    if((pq->heapArray[hijo1].priority > pq->heapArray[hijo2].priority) && (pq->heapArray[posicion].priority<pq->heapArray[hijo1].priority)){
+    if((pq->heapArray[hijo1].priority < pq->heapArray[hijo2].priority) && (pq->heapArray[posicion].priority > pq->heapArray[hijo1].priority)){
       heapElem aux=pq->heapArray[posicion];
       pq->heapArray[posicion]=pq->heapArray[hijo1];
       pq->heapArray[hijo1]=aux;
     }
     else{
-      if((pq->heapArray[hijo1].priority <= pq->heapArray[hijo2].priority) && (pq->heapArray[posicion].priority<=pq->heapArray[hijo2].priority)){
+      if((pq->heapArray[hijo1].priority >= pq->heapArray[hijo2].priority) && (pq->heapArray[posicion].priority>=pq->heapArray[hijo2].priority)){
         heapElem aux=pq->heapArray[posicion];
         pq->heapArray[posicion]=pq->heapArray[hijo2];
         pq->heapArray[hijo2]=aux;          

@@ -116,22 +116,17 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
     }
   }
 
-  printf("tareas sin precedentes obtenidas\n");
-
   //Agregamos las demas tareas al monticulo
   while(firstList(precedentesGeneral)!=NULL){
-    printf("while\n");
     tipoTarea *root = heap_top(montarea);
     heap_pop(montarea);
     pushBack(listaMostrar,root);
     root->completada = true;
-    printf("while\n");
     
     for(tipoTarea *tareaAct = (tipoTarea*)firstList(precedentesGeneral) ; tareaAct != NULL ; tareaAct = nextList(precedentesGeneral)){
       int cont=0;
-      printf("for 1\n");
+      
       for(tipoTarea * preActual = firstList(tareaAct->precedentes) ; preActual != NULL ; preActual = nextList(tareaAct->precedentes)){
-         printf("for 2\n");
         if(preActual->completada==true){
           cont++;
         }
@@ -142,10 +137,7 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
         popCurrent(precedentesGeneral);
       }
     }
-    
   }  
-
-  printf("tareas agregadas al monticulo\n\n");
   
   while(heap_top(montarea) != NULL){
     tipoTarea *root = heap_top(montarea);
@@ -153,20 +145,9 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
     pushBack(listaMostrar,root);
   }
 
-  printf("tareas agregadas a la lista\n\n");
-
   for(tipoTarea *tareaAct = (tipoTarea*)firstList(listaMostrar) ; tareaAct != NULL ; tareaAct = nextList(listaMostrar)){
       printf("%s , %i \n",tareaAct->nombre, tareaAct->prioridad);
   }
-  
-/*
--recorremos el mapa buscando los que no tienen precedentes y los agregamos en un monticulo binario segun prioridades desde el minimo
--sacamos la raiz, la agregamos a una lista y eliminamos el nodo
--Repetimos la busqueda de nodos sin precedentes y los agregamos en la
-
-*/
-
-
 }
 
 

@@ -12,7 +12,7 @@ typedef struct{
   char nombre[30]; //Nombre de la tarea
   int prioridad; //Prioridad de la tarea
   int contPre; //Contador de tareas precedentes a esta tarea
-  bool completada; //Booliano que sirve para la tercera función
+  bool completada; //Booleano que sirve para la tercera función
   List *precedentes; // Lista de tareas precedentes a esta tarea
 }tipoTarea;
 
@@ -267,6 +267,173 @@ void deshacerAccion(Map *mapaTarea, Stack* acciones){
   popFront(acciones);
 }
 
+//Con esa función se obtienen las palabras entre comas o punto comas
+const char *get_csv_field(char *tmp, int k, char separator1, char separator2) {
+    static char *line = NULL;
+    static int line_size = 0;
+    int open_mark = 0;
+    char *ret = (char *) malloc(100 * sizeof(char));
+    int ini_i = 0, i = 0;
+    int j = 0;
+    char separator = separator1;
+    if (line == NULL) {
+        line_size = strlen(tmp);
+        line = (char *) malloc((line_size + 1) * sizeof(char));
+        strcpy(line, tmp);
+    } else if (strcmp(line, tmp) != 0) {
+        line_size = strlen(tmp);
+        line = (char *) realloc(line, (line_size + 1) * sizeof(char));
+        strcpy(line, tmp);
+    }
+    while (line[i + 1] != '\0') {
+        if (line[i] == '\"') {
+            open_mark = 1 - open_mark;
+            if (open_mark) ini_i = i + 1;
+            i++;
+            continue;
+        }
+        if (open_mark || (line[i] != separator1 && line[i] != separator2)) {
+            if (k == j) ret[i - ini_i] = line[i];
+            i++;
+            continue;
+        }
+        if (line[i] == separator1 || line[i] == separator2) {
+            if (k == j) {
+                ret[i - ini_i] = 0;
+                return ret;
+            }
+            j++;
+            ini_i = i + 1;
+            if (line[i] == separator1) {
+                separator = separator1;
+            } else {
+                separator = separator2;
+            }
+        }
+        i++;
+    }
+    if (k == j) {
+        ret[i - ini_i] = 0;
+        return ret;
+    }
+    return NULL;
+}
+
+//Opción 6
+void cargarDatos(Map *mapaTarea){
+  char archivo[100];
+  //Se le pide al usuario que ingrese el nombre del archivo de donde desea importar las tareas
+  printf("Ingrese el nombre del archivo que quiere ingresar:\n");
+  fflush(stdin);
+  scanf("%[^\n]s",archivo);
+  getchar();
+  
+  //Se abre el archivo
+  FILE *fp=fopen(archivo, "r");
+  if(fp==NULL){
+    printf("===============================================================\n");
+    printf("                   Error al importar archivo...\n");
+    printf("     Asegúrese de importar al programa con el mismo nombre\n");
+    printf("===============================================================\n");
+    return;
+  }
+  char linea[100];
+  //Se obtiene la primera línea (Que no nos sirve porque son las descripciones de las columnas)
+  fgets(linea,101,fp);
+
+  
+  //A partir de aqui las lineas son importante porque tienen la información que necesitamos
+  while(fgets(linea,100,fp)!=NULL){
+    //Es una tarea por linea, por lo que aquí se crea
+    tipoTarea *tarea;
+    tarea=malloc(sizeof(tipoTarea));
+    int j=0;
+    //Con esa función se obtienen las palabras entre comas o punto comas
+    while(get_csv_field(linea, j, ',', ' ')!=NULL){
+
+      //Se le asigna a un auxiliar la palabra, que va cambiando por columna, en la primera es el nombre de la tarea, en la segunda es su prioridad y a partir de la tercera son sus tareas precedentes, que no se sabe cuantas son.
+      char *aux =(char *) get_csv_field(linea, j, ',', ';');
+      if(aux==NULL) break;
+      if(j==0){
+        //Se guarda el nombre de la tarea
+        strcpy(tarea->nombre,aux);        
+        tarea->contPre = 0;
+        tarea->completada = false;
+      }
+      if(j==1){
+        //Se guarda la prioridad de la tarea
+        tarea->prioridad=atoi(aux);
+      }
+      if(j==2){
+        tipoTarea* tareaPre = (tipoTarea*)searchMap(mapaTarea, aux);
+        if(tareaPre == NULL) printf("tararara%s\n",tarea->nombre);
+        tarea->precedentes=createList();
+        pushBack(tarea->precedentes, tareaPre);
+        tarea->contPre++;
+      }
+      if(j>=3){
+        //Se le van asignando sus tareas precedentes
+        tipoTarea* tareaPre = (tipoTarea*)searchMap(mapaTarea, aux);
+        if(tareaPre == NULL) printf("frijoles%s\n",tarea->nombre);
+        
+        pushBack(tarea->precedentes, tareaPre);
+        tarea->contPre++;
+      }
+      
+
+      /*
+      if(j>=2){
+        //Se le van asignando sus tareas precedentes
+        tipoTarea* tareaPre = (tipoTarea*)searchMap(mapaTarea, aux);
+        if(tareaPre != NULL) printf("sandia%i\n",tarea->contPre);
+        
+        if(tarea->contPre==0){
+          tarea->precedentes=createList();
+        }
+        pushBack(tarea->precedentes, tareaPre);
+        tarea->contPre++;
+      }
+      */
+      j++;
+    }
+   
+    char *aux2=malloc(100*sizeof(char));
+    strcpy(aux2, tarea->nombre);
+    insertMap(mapaTarea, aux2, tarea);
+  }
+  
+  printf("===============================================================\n");
+  printf("        La importación de tareas fue hecha con éxito\n");
+  printf("===============================================================\n");
+  fclose(fp);
+}
+
+void si(Map *mapaTarea){
+    // Verificar si el mapa está vacío
+    if (mapaTarea == NULL) {
+        printf("El mapa está vacío.\n");
+        return;
+    }
+
+    // Iterar sobre los elementos del mapa
+    for (void* iterator = firstMap(mapaTarea); iterator != NULL; iterator = nextMap(mapaTarea)) {
+        char* key = (char*)iterator;
+        tipoTarea* tarea = (tipoTarea*)searchMap(mapaTarea, key);
+        if (tarea != NULL) {
+            printf("Nombre: %s\n", tarea->nombre);
+            printf("Prioridad: %d\n", tarea->prioridad);
+            printf("Cantidad de Precedentes: %d\n", tarea->contPre);
+            printf("Tareas precedentes: ");
+            List* precedentes = tarea->precedentes;
+            for (void* iterator = firstList(precedentes); iterator != NULL; iterator = nextList(precedentes)) {
+                tipoTarea* precedente = (tipoTarea*)iterator;
+                printf("%s ", precedente->nombre);
+            }
+            printf("\n\n");
+        }
+    }
+}
+
 
 
 void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
@@ -301,12 +468,14 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
       case 4: marcarCompletada(mapaTarea, acciones);
       break;
       
-      case 5: 
-        deshacerAccion(mapaTarea, acciones);
+      case 5: deshacerAccion(mapaTarea, acciones);
       break;
         
-      //case 6: cargarDatos(tareas);
-      //break;
+      case 6: cargarDatos(mapaTarea);
+      break;
+
+      case 7: si(mapaTarea);
+      break;
       //en caso de ser cero se imprime lo sgte. Para finalizar el programa
       case 0:
         printf("⠀⠀⠀⠀⠀⠀⠀⢀⣤⠖⠛⠉⠉⠛⠶⣄⡤⠞⠛⠛⠙⠳⢤⡀\n");
@@ -346,4 +515,3 @@ int main(void) {
   
   return 0;
 }
-

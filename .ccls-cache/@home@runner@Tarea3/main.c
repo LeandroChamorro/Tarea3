@@ -19,7 +19,6 @@ typedef struct{
 
 typedef struct{
   int accion; //si agregó, 1, si añadió precedencia, 2 y si completó la tarea, 3.  
-  //char presedencia[30];
   tipoTarea *tareaCom; //Se guarda la tarea con la que hay que hacer la acción
   List *precedentes;
 }tipoAccion;
@@ -87,8 +86,8 @@ void agregarTarea(Map *mapaTarea, Stack * acciones){
 void establecerPrecedencia(Map *mapaTarea, Stack *acciones){
   char tarea1[30],tarea2[30];
   
-  solicitarString(tarea1,"Ingrese nombre de la tarea 1");
-  solicitarString(tarea2, "Ingrese nombre de la tarea 2");
+  solicitarString(tarea1,"Ingrese nombre de la que va a ser precedente");
+  solicitarString(tarea2, "Ingrese nombre de la tarea a la que se le va a asignar el presedente");
 
   //Se buscan ambas tareas en el mapa
   tipoTarea *tareaPre1 = searchMap(mapaTarea, tarea1);
@@ -357,33 +356,6 @@ void cargarDatos(Map *mapaTarea){
 }
 
 
-void si(Map *mapaTarea){
-    // Verificar si el mapa está vacío
-    if (mapaTarea == NULL) {
-        printf("El mapa está vacío.\n");
-        return;
-    }
-
-    // Iterar sobre los elementos del mapa
-    for (tipoTarea* iterator = firstMap(mapaTarea); iterator != NULL; iterator = nextMap(mapaTarea)) {
-        char* key = (char*)iterator->nombre;
-        tipoTarea* tarea = (tipoTarea*)searchMap(mapaTarea, key);
-        if (tarea != NULL) {
-            printf("Nombre: %s\n", tarea->nombre);
-            printf("Prioridad: %d\n", tarea->prioridad);
-            printf("Cantidad de Precedentes: %d\n", tarea->contPre);
-            printf("Tareas precedentes: ");
-            List* precedentes = tarea->precedentes;
-            for (tipoTarea* iterator = firstList(precedentes); iterator != NULL; iterator = nextList(precedentes)) {
-                tipoTarea* precedente = (tipoTarea*)iterator;
-                printf("%s| \n", precedente->nombre);
-            }
-            printf("\n\n");
-        }
-    }
-}
-
-
 void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
   //Se crea una variable "opcion" la cual será una condicionante para el ciclo "while" base de nuestro programa
   int opcion = 1;
@@ -422,8 +394,6 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
       case 6: cargarDatos(mapaTarea);
       break;
 
-      case 7: si(mapaTarea);
-      break;
       //en caso de ser cero se imprime lo sgte. Para finalizar el programa
       case 0:
         printf("⠀⠀⠀⠀⠀⠀⠀⢀⣤⠖⠛⠉⠉⠛⠶⣄⡤⠞⠛⠛⠙⠳⢤⡀\n");

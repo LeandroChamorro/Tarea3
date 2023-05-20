@@ -6,6 +6,7 @@
 #include "Map.h"
 #include "Stack.h"
 #include "heap.h"
+#include "treemap.h"
 #include <ctype.h>
 
 //ESTRUCTURAS
@@ -28,6 +29,18 @@ typedef struct{
 int is_equal_string(void * key1, void * key2) {
     if(strcmp((char*)key1, (char*)key2)==0) return 1;
     return 0;
+}
+
+int lower_than_string(void *key1, void *key2) {
+  if (strcmp((char *)key1, (char *)key2) < 0)
+    return 1;
+  return 0;
+}
+
+int lower_than_int(void *key1, void *key2) {
+  if (*(int *)key1 < *(int *)key2)
+    return 1;
+  return 0;
 }
 
 //Función para solicitar una cadena de caracteres.
@@ -126,66 +139,197 @@ void mostrarTareas(Map* mapaTarea, Heap* montarea){
     printf("\nNo se han ingresado tareas\n\n");
     return;
   }
+  printf("\nTareas por hacer: \n");
+  int numact = 1;
   
   List* listaMostrar = createList();//Lista de tareas que se mostrarán
   List* precedentesGeneral = createList();//Lista de tareas con precedentes
-
-
-  //Obtenemos las tareas sin precedentes y se mandan al montículo
+  TreeMap *tree = createTreeMap(lower_than_int); //Arbol para ordenar tareas de misma prioridad por orden alfabetico
+  Heap *montarea2 = createHeap(); //Monticulo secundario para ordenar por prioridad
+  List *sinPre = createList(); //Lista que gaurda las tareas sin precedentes con prioridad mayor a 1
+  
+  //Obtenemos las tareas sin precedentes
   //Las tareas con precedentes se van a la lista de las tareas con precedentes
-  for(tipoTarea *tareaAct = (tipoTarea*)firstMap(mapaTarea) ; tareaAct != NULL ; tareaAct = nextMap(mapaTarea)){
-    if(tareaAct->contPre == 0){
-      heap_push(montarea, tareaAct , tareaAct->prioridad);
-    }
-    else{
+  for (tipoTarea *tareaAct = (tipoTarea *)firstMap(mapaTarea); tareaAct != NULL; tareaAct = nextMap(mapaTarea)) {
+    if (tareaAct->contPre == 0) { 
+      if (tareaAct->prioridad == 1) { //si el contador de precedentes es 0 y su prioridad es 1 lo ingreso directamente al arbol
+        insertTreeMap(tree, tareaAct->nombre, tareaAct);
+      } else { //si el contador de precedentes es 0 pero es de prioridad mayor a 1 lo meto en una lista de tareas sin precedentes que ordenaré luego de ordenar los con prioridad 1
+        pushBack(sinPre, tareaAct);
+      }
+    } else {//Tareas con precedentes
       pushBack(precedentesGeneral, tareaAct);
     }
   }
 
-  //Agregamos las demas tareas que tienen precedentes al montículo,
-  //revisando tarea por tarea si la raiz del montículo es
-  //precedente de alguna de las tareas con precedentes, si es asi se 
-  //marca y se revisa si la tarea con precedentes ya no tenga precedentes,
-  //en ese caso se agregará al montículo.
-  //Además, cuando se saca la raiz del montículo, se inserta en una lista,
-  //de esta forma quedando ordenada de la manera que se requiere.
-  while(firstList(precedentesGeneral)!=NULL){
-    tipoTarea *root = heap_top(montarea);
-    heap_pop(montarea);
-    pushBack(listaMostrar,root);
+  //Ordeno los elementos de prioridad 1 
+  while (firstTreeMap(tree) != NULL) {
+    tipoTarea *root = firstTreeMap(tree)->value;
+    pushBack(listaMostrar, root);
     root->completada = true;
-    
-    for(tipoTarea *tareaAct = (tipoTarea*)firstList(precedentesGeneral) ; tareaAct != NULL ; tareaAct = nextList(precedentesGeneral)){
-      int cont=0;
-      
-      for(tipoTarea * preActual = firstList(tareaAct->precedentes) ; preActual != NULL ; preActual = nextList(tareaAct->precedentes)){
-        if(preActual->completada==true){
+
+    for (tipoTarea *tareaAct = (tipoTarea *)firstList(precedentesGeneral);
+         tareaAct != NULL; tareaAct = nextList(precedentesGeneral)) {
+      int cont = 0;
+
+      for (tipoTarea *preActual = firstList(tareaAct->precedentes);
+           preActual != NULL; preActual = nextList(tareaAct->precedentes)) {
+        if (preActual->completada == true) {
           cont++;
         }
       }
-      
-      if(cont==tareaAct->contPre){
-        heap_push(montarea, tareaAct , tareaAct->prioridad);
+
+      if (cont == tareaAct->contPre) {
+        heap_push(montarea, tareaAct, tareaAct->prioridad);
+        heap_push(montarea2, tareaAct, tareaAct->prioridad);
         popCurrent(precedentesGeneral);
       }
     }
-  }  
-  
-  while(heap_top(montarea) != NULL){
-    tipoTarea *root = heap_top(montarea);
-    heap_pop(montarea);
-    pushBack(listaMostrar,root);
+
+    eraseTreeMap(tree, root->nombre);
   }
 
-  int numact = 1;
-  printf("\nTareas por hacer: \n");
-  for(tipoTarea *tareaAct = (tipoTarea*)firstList(listaMostrar) ; tareaAct != NULL ; tareaAct = nextList(listaMostrar)){
-    tareaAct->completada = false;
-    printf("%i.- Tarea: %s , Prioridad: %i ",numact,tareaAct->nombre, tareaAct->prioridad);
+  //Ordeno los elementos sin precedentes por prioridad
+  Heap *montarea3 = createHeap();
+  if (sinPre != NULL) { //Meto los sin precedentes en un heap
+    for (tipoTarea *tareaAct = (tipoTarea *)firstList(sinPre); tareaAct != NULL; tareaAct = nextList(sinPre)) {
+      heap_push(montarea3, tareaAct, tareaAct->prioridad);
+    }
 
-    if(firstList(tareaAct->precedentes) != NULL)printf(", Tareas precedentes: ");
-    for(tipoTarea* recList = firstList(tareaAct->precedentes) ; recList != NULL ; recList = nextList(tareaAct->precedentes) ){
-      printf(" %s",recList->nombre);
+    //Establezco mi primer elemento y la prioridad que voy a ordenar
+    tipoTarea *top = heap_top(montarea3);
+    int prioridad = top->prioridad;
+
+    for (top = heap_top(montarea3); top != NULL; top = heap_top(montarea3)) {
+      tipoTarea *root = heap_top(montarea3);
+      pushBack(listaMostrar, root);
+      root->completada = true;
+
+      for (tipoTarea *tareaAct = (tipoTarea *)firstList(precedentesGeneral); tareaAct != NULL; tareaAct = nextList(precedentesGeneral)) {
+        int cont = 0;
+
+        for (tipoTarea *preActual = firstList(tareaAct->precedentes); preActual != NULL; preActual = nextList(tareaAct->precedentes)) {
+          if (preActual->completada == true) {
+            cont++;
+          }
+        }
+
+        if (cont == tareaAct->contPre) {
+          heap_push(montarea, tareaAct, tareaAct->prioridad);
+          heap_push(montarea2, tareaAct, tareaAct->prioridad);
+          popCurrent(precedentesGeneral);
+        }
+      }
+      heap_pop(montarea3);
+    }
+  }
+
+  while (heap_top(montarea3) != NULL) {
+    //selecciono una prioridad y e inserto sus elementos en el arbol para que me los ordene alfabeticamente 
+    tipoTarea *top = heap_top(montarea3);
+    int prioridad = top->prioridad;
+
+    for (top = heap_top(montarea3); top->prioridad != prioridad; top = heap_top(montarea3)) {
+      if (top == NULL)
+        break;
+      if (top->prioridad == prioridad)
+        insertTreeMap(tree, top->nombre, top);
+      heap_pop(montarea3);
+    }
+
+    while (firstTreeMap(tree) != NULL) {
+      tipoTarea *root = firstTreeMap(tree)->value;
+      pushBack(listaMostrar, root);
+      root->completada = true;
+
+      for (tipoTarea *tareaAct = (tipoTarea *)firstList(precedentesGeneral);
+           tareaAct != NULL; tareaAct = nextList(precedentesGeneral)) {
+        int cont = 0;
+
+        for (tipoTarea *preActual = firstList(tareaAct->precedentes);
+             preActual != NULL; preActual = nextList(tareaAct->precedentes)) {
+          if (preActual->completada == true) {
+            cont++;
+          }
+        }
+
+        if (cont == tareaAct->contPre) {
+          heap_push(montarea, tareaAct, tareaAct->prioridad);
+          heap_push(montarea2, tareaAct, tareaAct->prioridad);
+          popCurrent(precedentesGeneral);
+        }
+      }
+      eraseTreeMap(tree, root->nombre);
+    }
+  }
+
+  //Inserto los elementos con precedentes en el heap
+  while (firstList(precedentesGeneral) != NULL) {
+
+    while (heap_top(montarea) != NULL) {
+      tipoTarea *root = heap_top(montarea);
+      root->completada = true;
+
+      for (tipoTarea *tareaAct = (tipoTarea *)firstList(precedentesGeneral);
+           tareaAct != NULL; tareaAct = nextList(precedentesGeneral)) {
+        int cont = 0;
+
+        for (tipoTarea *preActual = firstList(tareaAct->precedentes);
+             preActual != NULL; preActual = nextList(tareaAct->precedentes)) {
+          if (preActual->completada == true) {
+            cont++;
+          }
+        }
+
+        if (cont == tareaAct->contPre) {
+          heap_push(montarea, tareaAct, tareaAct->prioridad);
+          heap_push(montarea2, tareaAct, tareaAct->prioridad);
+          // printf("%s\n",tareaAct->nombre);
+          popCurrent(precedentesGeneral);
+        }
+      }
+      heap_pop(montarea);
+    }
+  }
+
+  //Paso los elementos con precedentes del heap con cierta prioridad al arbol para que los ordene alfabeticamente
+  while (heap_top(montarea2) != NULL) {
+    tipoTarea *root = heap_top(montarea2);
+    int priori = root->prioridad;
+    tipoTarea *rar = firstList(root->precedentes);
+
+    while (root->prioridad == priori) {
+      insertTreeMap(tree, rar->nombre, root);
+      heap_pop(montarea2);
+
+      if (heap_top(montarea2) == NULL)
+        break;
+      if (heap_top(montarea2) != NULL) {
+        root = heap_top(montarea2);
+        rar = firstList(root->precedentes);
+      }
+    }
+    tipoTarea *treeAct = firstTreeMap(tree)->value;
+    char *keyAct = firstTreeMap(tree)->key;
+    while (firstTreeMap(tree) != NULL) {
+      pushBack(listaMostrar, treeAct);
+      eraseTreeMap(tree, keyAct);
+      if (firstTreeMap(tree) != NULL) {
+        treeAct = firstTreeMap(tree)->value;
+        keyAct = firstTreeMap(tree)->key;
+      }
+    }
+  }
+
+  //Imprimo
+  for (tipoTarea *tareaAct = (tipoTarea *)firstList(listaMostrar); tareaAct != NULL; tareaAct = nextList(listaMostrar)) {
+    tareaAct->completada = false;
+    printf("%i.- Tarea: %s , Prioridad: %i ", numact, tareaAct->nombre,
+           tareaAct->prioridad);
+
+    if (firstList(tareaAct->precedentes) != NULL) printf(", Tareas precedentes: ");
+    for (tipoTarea *recList = firstList(tareaAct->precedentes); recList != NULL; recList = nextList(tareaAct->precedentes)) {
+      printf(" %s", recList->nombre);
     }
     printf("\n");
     numact++;
@@ -429,6 +573,7 @@ void menu(Map *mapaTarea, Stack *acciones, Heap *montarea){
 int main(void) {
   Stack *acciones = stack_create();
   Map * mapaTarea = createMap(is_equal_string);
+  setSortFunction(mapaTarea, lower_than_string);
   Heap *montarea = createHeap();
   menu(mapaTarea, acciones, montarea);
   
